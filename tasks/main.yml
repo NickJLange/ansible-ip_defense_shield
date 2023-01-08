@@ -1,0 +1,72 @@
+---
+  - block:
+    - name: Add defenseshield group
+      group:
+        name: "{{ container_group }}"
+        state: present
+    - name: "Add {{ container_user }} user"
+      user:
+        name: "{{ container_user }}"
+        comment: "IP Defense Shield"
+        group: "{{ container_group }}"
+        shell: /bin/bash
+        password_lock: true
+    - name: create cache directory if not exists
+      file:
+        path: "/home/{{ container_user }}/.cache/"
+        state: directory
+        owner: "{{ container_user }}"
+        group: "{{ container_group }}"
+        mode: 0711
+    - name: create cache directory if not exists
+      file:
+        path: "/home/{{ container_user }}/.local/"
+        state: directory
+        owner: "{{ container_user }}"
+        group: "{{ container_group }}"
+        mode: 0711
+    - name: create userbin directory if not exists
+      file:
+        path: "/home/{{ container_user }}/bin/"
+        state: directory
+        owner: "{{ container_user }}"
+        group: "{{ container_group }}"
+        mode: 0711
+    - name: create useretc directory if not exists
+      file:
+        path: "/home/{{ container_user }}/etc/"
+        state: directory
+        owner: "{{ container_user }}"
+        group: "{{ container_group }}"
+        mode: 0711
+    - name: "Install Python Modules"
+      pip:
+        requirements: "/home/{{ container_user }}/etc/requirements.txt"
+      become: true
+      become_user: "{{ container_user }} "
+    - name: "Copy Special NFT into place"
+      copy:
+        src: "/usr/sbin/nft"
+        remote_src: true
+        dest: "/home/{{ container_user }}/bin/"
+        mode: 0700
+        owner: "{{ container_user }}"
+        group: "{{ container_group }}"
+    - name: "set cap the binary"
+      shell: setcap CAP_NET_RAW,CAP_NET_ADMIN+ep ./nft
+      args:
+        chdir: "/home/{{ container_user }}/bin/"
+    - name: 'Update Path in Cron for user'
+      cron:
+        name: "PATH"
+        env: yes
+        job: "/home/{{ container_user }}/bin/:$PATH"
+        user: "{{ container_user }}"
+    - name: 'Install Defense Shield Cron'
+      cron:
+        name: "Update Shield"
+        minute: "0"
+        hour: "8,19"
+        job: "/home/{{ container_user }}/bin/update_shield.py --base-url {{ base_url }}"
+        user: "{{ container_user }}"
+    - import_tasks: install.yml

@@ -1,0 +1,20 @@
+---
+  - block:
+    - name: "Copy Script into place"
+      copy:
+        src: "{{ item }}"
+        dest: "/home/{{ container_user }}/bin/"
+        mode: 0700
+        owner: "{{ container_user }}"
+        group: "{{ container_group }}"
+      with_fileglob:
+      - templates/bin/*      
+    - name: "Copy Config into place"
+      copy:
+        src: "{{ item }}"
+        dest: "/home/{{ container_user }}/etc/"
+        mode: 0700
+        owner: "{{ container_user }}"
+        group: "{{ container_group }}"
+      with_fileglob:
+      - templates/etc/* 

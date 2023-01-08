@@ -1,0 +1,45 @@
+flush ruleset
+
+table inet filter {
+	set LANv4 {
+		type ipv4_addr
+		flags interval
+
+		elements = { 127.0.0.1/32, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16 }
+	}
+	set LANv6 {
+		type ipv6_addr
+		flags interval
+
+		elements = { fd00::/8, fe80::/10 }
+	}
+	set WANv6 {
+		type ipv6_addr
+		flags interval
+
+		elements = { {% for network in ipv6 %} {{ network }} {% if not loop.last %},{% endif %} {% endfor %} }
+	}
+
+	set WANv4 {
+		type ipv4_addr
+		flags interval
+
+		elements = { {% for network in ipv4 %} {{ network }} {% if not loop.last %},{% endif %} {% endfor %} }
+	}
+
+	chain input {
+		type filter hook input priority filter; policy drop;
+		ct state established,related accept #
+		ip6 saddr @LANv6 accept comment "Connections from private IP address ranges"
+		ip saddr @LANv4 accept comment "Connections from private IP address ranges"
+		ip6 saddr @WANv6 tcp dport ssh accept comment "Connections from public IP address ranges"
+		ip saddr @WANv4 tcp dport ssh accept comment "Connections from public IP address ranges"
+		tcp dport != ssh accept comment "Non-SSH traffic is blocked at firewall"
+	}
+	chain forward {
+		type filter hook forward priority filter; policy accept;
+	}
+	chain output {
+		type filter hook output priority filter; policy accept;
+	}
+}
